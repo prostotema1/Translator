@@ -6,7 +6,7 @@
 ## Запуск приложения
 1. Склонируйте репозиторий 
 ```bash
-git clone https://
+git clone https://github.com/prostotema1/Translator.git
 ```
 
 2. Перейдите в директорию с проектом
