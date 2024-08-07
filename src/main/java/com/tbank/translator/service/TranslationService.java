@@ -1,13 +1,15 @@
 package com.tbank.translator.service;
 
-import com.tbank.translator.requests.MyMemoryResponse;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import com.tbank.translator.requests.YandexTranslateResponse;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -19,8 +21,11 @@ public class TranslationService {
     private static final int MAX_THREADS = 10;
     private final RestTemplate restTemplate;
     private final ExecutorService executorService;
-
-    private final String URL = "https://api.mymemory.translated.net/get";
+    private final String API_URL = "https://translate.api.cloud.yandex.net/translate/v2/translate";
+    @Value("${yandex.api.token}")
+    private String apiToken;
+    @Value("${yandex.folderId}")
+    private String folderId;
 
     public TranslationService() {
         this.restTemplate = new RestTemplate();
@@ -43,14 +48,22 @@ public class TranslationService {
     }
 
     private String translateWord(String word, String sourceLang, String targetLang) {
-        String url = String.format("%s?q=%s&langpair=%s|%s", URL, word, sourceLang, targetLang);
+        Map<String, String> requestBody = new HashMap<>();
+        requestBody.put("texts", word);
+        requestBody.put("folderId", folderId);
+        requestBody.put("targetLanguageCode", targetLang);
+        requestBody.put("sourceLanguageCode", sourceLang);
 
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(apiToken);
 
-        ResponseEntity<MyMemoryResponse> response = restTemplate.getForEntity(url, MyMemoryResponse.class);
+        HttpEntity<Map<String, String>> requestEntity = new HttpEntity<>(requestBody, headers);
+        ResponseEntity<YandexTranslateResponse> response = restTemplate.postForEntity(API_URL, requestEntity, YandexTranslateResponse.class);
         if (response.getStatusCode() == HttpStatus.OK) {
-            MyMemoryResponse body = response.getBody();
-            if (body != null && body.getResponseData() != null) {
-                return body.getResponseData().getTranslatedText();
+            YandexTranslateResponse body = response.getBody();
+            if (body != null && body.getTranslations() != null) {
+                return body.getTranslations().get(0).getText();
             }
         }
         return word;
